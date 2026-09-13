@@ -1,0 +1,6 @@
+{
+  "name": "Quantum-h Invoice Bot Control Panel",
+  "description": "Client-facing operational dashboard to monitor, configure, and control the Quantum-h invoice verification automation bot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

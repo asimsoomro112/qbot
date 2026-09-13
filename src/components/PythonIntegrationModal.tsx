@@ -1,0 +1,321 @@
+import React, { useState } from 'react';
+import {
+  Code2,
+  Copy,
+  Check,
+  Server,
+  Database,
+  ArrowRight,
+  ShieldCheck,
+  Terminal,
+  ExternalLink
+} from 'lucide-react';
+
+interface PythonIntegrationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const PythonIntegrationModal: React.FC<PythonIntegrationModalProps> = ({ isOpen, onClose }) => {
+  const [copiedTab, setCopiedTab] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'rest' | 'firestore'>('rest');
+
+  if (!isOpen) return null;
+
+  const pythonSnippetREST = `"""
+Quantum-h Invoice Verification Automation
+Playwright Bot Integration with Control Panel API
+"""
+import time
+import requests
+import os
+import sys
+
+DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:3000")
+API_BASE = f"{DASHBOARD_URL}/api"
+
+def report_step(submission_id, supplier, inv, step, label, progress):
+    """Sends live progress updates back to the Node/React dashboard"""
+    try:
+        requests.post(f"{API_BASE}/bot/step", json={
+            "submissionId": submission_id,
+            "supplierName": supplier,
+            "invoiceNumber": inv,
+            "step": step,
+            "stepLabel": label,
+            "progressPercent": progress
+        }, timeout=2)
+    except:
+        pass
+
+def send_log(level, message, submission_id=None, step=None):
+    try:
+        requests.post(f"{API_BASE}/logs", json={
+            "level": level,
+            "message": message,
+            "submissionId": submission_id,
+            "step": step
+        }, timeout=2)
+    except:
+        pass
+
+def fetch_config():
+    """Dynamically reads the dashboard rules on startup"""
+    try:
+        res = requests.get(f"{API_BASE}/settings")
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        print(f"Failed to reach dashboard at {API_BASE}: {e}")
+        sys.exit(1)
+
+def run_invoice_verification():
+    # 1. Boot sequence & Dashboard Sync
+    config = fetch_config()
+    print(f"Connecting to portal: {config['credentials']['portalUrl']}")
+    
+    # Map Velux Rules from Dashboard
+    CAMPAIGN_START_DATE = config['veluxRules']['campaignStartDate']
+    NON_ELIGIBLE_CODES = config['veluxRules']['nonEligibleProductCodes']
+    AUTO_SUBMIT = config['safety']['autoSubmit']
+    
+    # Send Heartbeat
+    requests.post(f"{API_BASE}/bot/heartbeat", json={
+        "hostname": "Python-Playwright-Worker-1",
+        "version": "v1.0"
+    })
+
+    # ... Playwright initialization here (sync_playwright) ...
+    # This loop structure replaces the generic steps with the Velux flow.
+    
+    dummy_sub_id = "8819203"
+    
+    report_step(dummy_sub_id, "Knauf Gips", "", "login", "Authenticating...", 10)
+    time.sleep(2) # Simulate Playwright logic
+    
+    report_step(dummy_sub_id, "Knauf Gips", "", "navigate", "Opening 'Data Required' tab", 30)
+    time.sleep(2)
+    
+    report_step(dummy_sub_id, "Knauf Gips", "INV-102", "extract_pdfs", "Downloading and OCRing receipts...", 50)
+    time.sleep(2)
+    send_log("info", "PDF Stream Extracted", dummy_sub_id, "extract_pdfs")
+
+    report_step(dummy_sub_id, "Knauf Gips", "INV-102", "velux_rules_check", "Applying VELUX PLUS rules...", 70)
+    time.sleep(2)
+    send_log("success", "VELUX Rules Check Passed", dummy_sub_id, "velux_rules_check")
+    
+    report_step(dummy_sub_id, "Knauf Gips", "INV-102", "fill_form", "Populating fields", 90)
+    time.sleep(2)
+    
+    if AUTO_SUBMIT:
+        send_log("success", "Auto-submitted successfully", dummy_sub_id, "awaiting_submit")
+    else:
+        report_step(dummy_sub_id, "Knauf Gips", "INV-102", "awaiting_submit", "Waiting for manual confirmation", 100)
+        
+    # Send Final History Record (in real app, POST to /api/history)
+    requests.get(f"{API_BASE}/history") 
+
+if __name__ == "__main__":
+    run_invoice_verification()
+`;
+
+  const pythonSnippetFirestore = `"""
+Quantum-h Invoice Bot - Direct Firestore State Sync
+"""
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+cred = credentials.Certificate("serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# 1. Listen or fetch active config
+config_ref = db.collection("settings").document("active_config")
+settings = config_ref.get().to_dict()
+
+# 2. Update Bot Status & Currently Processing live
+status_ref = db.collection("bot_status").document("main_bot")
+status_ref.set({
+    "status": "running",
+    "lastHeartbeat": firestore.SERVER_TIMESTAMP,
+    "currentlyProcessing": {
+        "submissionId": "2169407",
+        "supplierName": "Theodor WÖLPERT GmbH & Co. KG",
+        "invoiceNumber": "58208485",
+        "step": "extract_pdfs",
+        "progressPercent": 65
+    }
+}, merge=True)
+
+# 3. Append to logs collection
+db.collection("logs").add({
+    "timestamp": firestore.SERVER_TIMESTAMP,
+    "level": "info",
+    "message": "Extracted PDF stream matched PO record",
+    "submissionId": "2169407"
+})
+`;
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedTab(id);
+    setTimeout(() => setCopiedTab(null), 2000);
+  };
+
+  return (
+    <div
+      id="python-integration-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        id="python-integration-modal-card"
+        className="relative w-full max-w-4xl bg-[#121224] border border-purple-500/25 rounded-2xl shadow-2xl shadow-purple-950/40 my-8 overflow-hidden text-slate-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-purple-500/15 bg-gradient-to-r from-purple-950/40 via-transparent to-purple-950/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <Code2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                Python Playwright Bot Integration
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Ready to Connect
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                How your separate Python automation script talks to this control panel in real time.
+              </p>
+            </div>
+          </div>
+          <button
+            id="close-python-modal-btn"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="flex border-b border-white/10 px-6 bg-black/20 gap-4 pt-3">
+          <button
+            id="tab-rest-api"
+            onClick={() => setActiveTab('rest')}
+            className={`flex items-center gap-2 pb-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'rest'
+                ? 'border-purple-500 text-purple-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Server className="w-4 h-4" />
+            Option 1: Direct REST API (Recommended)
+          </button>
+          <button
+            id="tab-firestore-sync"
+            onClick={() => setActiveTab('firestore')}
+            className={`flex items-center gap-2 pb-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'firestore'
+                ? 'border-purple-500 text-purple-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            Option 2: Cloud Firestore State Sync
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          {/* Architecture overview pill */}
+          <div className="p-4 rounded-xl bg-purple-950/25 border border-purple-500/20 text-xs text-slate-300 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-purple-300">
+              <ShieldCheck className="w-4 h-4" />
+              Complete Separation of Concerns
+            </div>
+            <p className="leading-relaxed">
+              Your browser automation (Playwright/Selenium) runs securely on your internal server or VM. It sends live step notifications to this dashboard so operations staff can monitor progress, start/stop the queue, and change matching rules without touching Python code.
+            </p>
+          </div>
+
+          {/* Code block */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-purple-400" />
+                {activeTab === 'rest'
+                  ? 'playwright_bot_client.py (REST Mode)'
+                  : 'playwright_bot_firestore.py (Firestore Mode)'}
+              </span>
+              <button
+                id="copy-code-btn"
+                onClick={() =>
+                  handleCopy(
+                    activeTab === 'rest' ? pythonSnippetREST : pythonSnippetFirestore,
+                    activeTab
+                  )
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all"
+              >
+                {copiedTab === activeTab ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <pre className="p-4 rounded-xl bg-black/60 border border-white/10 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto max-h-72">
+              {activeTab === 'rest' ? pythonSnippetREST : pythonSnippetFirestore}
+            </pre>
+          </div>
+
+          {/* Endpoints schema reference */}
+          <div className="p-4 rounded-xl bg-[#17172e] border border-white/10 space-y-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300">
+              Control Panel API Endpoints Reference
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="p-2 rounded bg-black/30 border border-white/5 flex items-center justify-between">
+                <span className="text-emerald-400">GET /api/status</span>
+                <span className="text-slate-400 text-[11px]">Polling bot status</span>
+              </div>
+              <div className="p-2 rounded bg-black/30 border border-white/5 flex items-center justify-between">
+                <span className="text-cyan-400">POST /api/bot/step</span>
+                <span className="text-slate-400 text-[11px]">Live progress stepper</span>
+              </div>
+              <div className="p-2 rounded bg-black/30 border border-white/5 flex items-center justify-between">
+                <span className="text-purple-400">GET /api/settings</span>
+                <span className="text-slate-400 text-[11px]">Read active rules</span>
+              </div>
+              <div className="p-2 rounded bg-black/30 border border-white/5 flex items-center justify-between">
+                <span className="text-amber-400">POST /api/logs</span>
+                <span className="text-slate-400 text-[11px]">Write activity logs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end p-4 px-6 border-t border-purple-500/15 bg-black/40">
+          <button
+            id="close-python-modal-footer-btn"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 transition-all"
+          >
+            Got It
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
