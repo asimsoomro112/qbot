@@ -1,6 +1,6 @@
 import express from 'express';
 import path from 'path';
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, watchFile } from 'fs';
 import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
@@ -122,6 +122,29 @@ function saveHistoryStore() {
   } catch (err) {
     console.error('Could not save history_store.json:', err);
   }
+}
+
+// Watch history_store.json on disk so background runs or external updates automatically sync
+if (existsSync(HISTORY_FILE)) {
+  watchFile(HISTORY_FILE, { interval: 1500 }, () => {
+    try {
+      const savedData = JSON.parse(readFileSync(HISTORY_FILE, 'utf-8'));
+      if (Array.isArray(savedData.submissions)) {
+        processedSubmissions = savedData.submissions;
+        for (const sub of processedSubmissions) {
+          syncSubmission(sub);
+        }
+      }
+      if (Array.isArray(savedData.alerts)) {
+        alerts = savedData.alerts;
+        for (const alert of alerts) {
+          syncAlert(alert);
+        }
+      }
+      recomputeStats();
+      pushBotState(botStatus);
+    } catch {}
+  });
 }
 
 function removeSubmissionFromSubmittedLog(targetIdentifiers: string[]) {
@@ -512,6 +535,16 @@ async function startServer() {
     onUpdateSettings: (newSettings) => {
       currentSettings = { ...currentSettings, ...newSettings };
       saveSettingsStore();
+      pushBotState(botStatus);
+    },
+    onDeleteSubmission: (cleanId) => {
+      removeSubmissionFromSubmittedLog([cleanId]);
+      processedSubmissions = processedSubmissions.filter(
+        (s) => s.id !== cleanId && s.submissionId !== cleanId && s.id !== `id:${cleanId}`
+      );
+      alerts = alerts.filter((a) => a.submissionId !== cleanId && a.id !== cleanId);
+      recomputeStats();
+      saveHistoryStore();
       pushBotState(botStatus);
     },
   });

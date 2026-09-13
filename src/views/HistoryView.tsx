@@ -41,7 +41,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   initialStatusFilter,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped'>(initialStatusFilter || 'All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped' | 'Multiple Invoices Submitted'>(initialStatusFilter || 'All');
   const [verificationFilter, setVerificationFilter] = useState<'All' | 'Verified' | 'Unresolved' | 'Pending'>('All');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week'>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,6 +60,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       // Status filter
       if (statusFilter === 'Needs Review') {
         if (sub.status === 'Success') return false;
+      } else if (statusFilter === 'Skipped') {
+        if (sub.status !== 'Skipped' && sub.status !== 'Multiple Invoices Submitted') return false;
       } else if (statusFilter !== 'All' && sub.status !== statusFilter) {
         return false;
       }
@@ -196,10 +198,22 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             Needs Review
           </span>
         );
+      case 'Multiple Invoices Submitted':
+        return (
+          <div className="flex flex-col">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+              <AlertTriangle className="w-3.5 h-3.5 text-purple-400" />
+              Multiple Invoices
+            </span>
+            <span className="text-[9px] text-purple-400/80 mt-0.5 pl-0.5">
+              Flagged &amp; Redacted (Info added)
+            </span>
+          </div>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/25">
-            Skipped
+            {status || 'Skipped'}
           </span>
         );
     }
@@ -281,6 +295,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <option value="Mismatch" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Mismatches</option>
               <option value="Error" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Errors</option>
               <option value="Skipped" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Skipped</option>
+              <option value="Multiple Invoices Submitted" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Multiple Invoices Submitted</option>
             </select>
           </div>
 
@@ -299,7 +314,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <option value="All" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">All Verifications</option>
               <option value="Verified" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">✓ Sahi Hua Hai (Verified)</option>
               <option value="Unresolved" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">⚠ Unresolved (Masla Hai)</option>
-              <option value="Pending" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">○ Pending Client Review</option>
+              <option value="Pending" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Pending Proof Check</option>
             </select>
           </div>
 
@@ -316,7 +331,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none"
             >
               <option value="all" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">All Dates</option>
-              <option value="today" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Processed Today</option>
+              <option value="today" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Today</option>
               <option value="week" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Past 7 Days</option>
             </select>
           </div>
@@ -386,6 +401,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     sub.comparisonData?.discrepancyNote?.toLowerCase().includes('out of date') ||
                     sub.comparisonData?.discrepancyNote?.toLowerCase().includes('manual review');
 
+                  const rawDate = sub.processedAt || (sub as any).dateProcessed;
+                  const dateObj = rawDate ? new Date(rawDate) : new Date();
+                  const validDate = !isNaN(dateObj.getTime());
+
                   return (
                     <tr
                       key={sub.id}
@@ -398,14 +417,20 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       #{sub.submissionId}
                     </td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                      {new Date(sub.processedAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}{' '}
-                      {new Date(sub.processedAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {validDate ? (
+                        <>
+                          {dateObj.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}{' '}
+                          {dateObj.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </>
+                      ) : (
+                        'Recent'
+                      )}
                     </td>
                     <td className="p-4 whitespace-nowrap">{getStatusBadge(sub.status)}</td>
                     <td className="p-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>

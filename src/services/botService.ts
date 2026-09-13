@@ -4,8 +4,9 @@ import {
   onSnapshot,
   addDoc,
   setDoc,
+  updateDoc,
+  deleteDoc,
   query,
-  orderBy,
   limit,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -21,7 +22,7 @@ import type {
 export { isFirebaseConfigured };
 
 /**
- * Checks if a heartbeat timestamp is fresh (within 30 seconds)
+ * Checks if a heartbeat timestamp is fresh (within 35 seconds)
  */
 export function isHeartbeatActive(lastHeartbeat?: string): boolean {
   if (!lastHeartbeat) return false;
@@ -75,7 +76,7 @@ export function subscribeBotStatus(
   };
 
   poll();
-  const interval = setInterval(poll, 2500);
+  const interval = setInterval(poll, 3000);
   return () => {
     active = false;
     clearInterval(interval);
@@ -92,8 +93,7 @@ export function subscribeActivityLogs(
   if (isFirebaseConfigured && db) {
     const q = query(
       collection(db, 'activity_logs'),
-      orderBy('timestamp', 'desc'),
-      limit(100)
+      limit(150)
     );
     const unsubscribe = onSnapshot(
       q,
@@ -102,6 +102,14 @@ export function subscribeActivityLogs(
           id: d.id,
           ...d.data(),
         })) as LogEntry[];
+
+        // Sort descending by serverTime or timestamp
+        logs.sort((a: any, b: any) => {
+          const tA = a.serverTime || new Date(a.timestamp || 0).getTime();
+          const tB = b.serverTime || new Date(b.timestamp || 0).getTime();
+          return tB - tA;
+        });
+
         onUpdate(logs);
       },
       (err) => {
@@ -144,16 +152,29 @@ export function subscribeSubmissions(
   if (isFirebaseConfigured && db) {
     const q = query(
       collection(db, 'submissions'),
-      orderBy('dateProcessed', 'desc'),
-      limit(150)
+      limit(250)
     );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const subs = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as ProcessedSubmission[];
+        const subs = snapshot.docs.map((d) => {
+          const data = d.data();
+          const processedAt = data.processedAt || data.dateProcessed || new Date().toISOString();
+          return {
+            id: d.id,
+            ...data,
+            processedAt,
+            dateProcessed: processedAt,
+          };
+        }) as ProcessedSubmission[];
+
+        // Robust client-side sort descending by processedAt or dateProcessed
+        subs.sort((a, b) => {
+          const tA = new Date(a.processedAt || (a as any).dateProcessed || 0).getTime();
+          const tB = new Date(b.processedAt || (b as any).dateProcessed || 0).getTime();
+          return tB - tA;
+        });
+
         onUpdate(subs);
       },
       (err) => {
@@ -172,6 +193,7 @@ export function subscribeSubmissions(
       if (res.ok && active) {
         const data = await res.json();
         if (data.submissions) onUpdate(data.submissions);
+        else if (data.items) onUpdate(data.items);
       }
     } catch (err) {
       if (active && onError) onError(err);
@@ -196,16 +218,26 @@ export function subscribeAlerts(
   if (isFirebaseConfigured && db) {
     const q = query(
       collection(db, 'alerts'),
-      orderBy('timestamp', 'desc'),
-      limit(50)
+      limit(100)
     );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const alerts = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as AlertItem[];
+        const alerts = snapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            detectedAt: data.detectedAt || data.timestamp || new Date().toISOString(),
+          };
+        }) as AlertItem[];
+
+        alerts.sort((a, b) => {
+          const tA = new Date(a.detectedAt || 0).getTime();
+          const tB = new Date(b.detectedAt || 0).getTime();
+          return tB - tA;
+        });
+
         onUpdate(alerts);
       },
       (err) => {
@@ -381,3 +413,87 @@ export async function saveBotSettings(
   const data = await res.json();
   return { success: res.ok, message: data.message || (res.ok ? 'Settings saved' : 'Failed') };
 }
+
+/**
+ * 10. Update Submission Verification (Verified / Unresolved / Pending)
+ */
+export async function updateSubmissionVerificationRemote(
+  submissionId: string,
+  verification: 'verified' | 'unresolved' | 'pending',
+  note?: string
+): Promise<{ success: boolean; message: string }> {
+  const cleanId = (submissionId || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const candidates = [submissionId, `id:${cleanId}`, cleanId, `sub-${cleanId}`];
+      for (const targetId of candidates) {
+        try {
+          await updateDoc(doc(db, 'submissions', targetId), {
+            clientVerification: verification,
+            ...(note !== undefined ? { clientVerificationNote: note } : {}),
+          });
+          return { success: true, message: 'Verification status updated' };
+        } catch {}
+      }
+    } catch (err: any) {
+      console.warn('[botService] Firestore verification update fallback:', err);
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(cleanId)}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientVerification: verification, note }),
+    });
+    return { success: res.ok, message: res.ok ? 'Verification updated' : 'Failed' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Verification update failed' };
+  }
+}
+
+/**
+ * 11. Delete Submission & Unlock
+ */
+export async function deleteSubmissionRemote(
+  submission: ProcessedSubmission
+): Promise<{ success: boolean; message: string }> {
+  const rawId = submission.submissionId || submission.id;
+  const cleanId = (rawId || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const candidates = [submission.id, `id:${cleanId}`, cleanId, `sub-${cleanId}`];
+      for (const targetId of candidates) {
+        if (targetId) {
+          try {
+            await deleteDoc(doc(db, 'submissions', targetId));
+          } catch {}
+        }
+      }
+      // Notify local runner to remove lock in submitted_submissions.txt
+      await addDoc(collection(db, 'bot_commands'), {
+        action: 'DELETE_SUBMISSION',
+        submissionId: cleanId,
+        id: submission.id,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        source: 'vercel_dashboard',
+      });
+      return { success: true, message: `Test record #${cleanId} deleted` };
+    } catch (err: any) {
+      console.warn('[botService] Firestore delete error:', err);
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(cleanId || rawId)}`, {
+      method: 'DELETE',
+    });
+    return { success: res.ok, message: res.ok ? 'Record deleted' : 'Failed' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Delete request failed' };
+  }
+}
+

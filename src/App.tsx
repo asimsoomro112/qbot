@@ -25,6 +25,8 @@ import {
   sendPauseCommand,
   sendStopCommand,
   saveBotSettings,
+  updateSubmissionVerificationRemote,
+  deleteSubmissionRemote,
   isFirebaseConfigured,
 } from './services/botService';
 
@@ -406,25 +408,12 @@ export default function App() {
     );
     if (!confirmed) return;
     try {
-      const res = await fetch(`/api/history/${encodeURIComponent(submission.submissionId || submission.id)}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Delete failed');
-      }
-      const data = await res.json().catch(() => ({}));
+      await deleteSubmissionRemote(submission);
       setSubmissions((previous) => previous.filter((entry) => entry.id !== submission.id && entry.submissionId !== submission.submissionId));
       setAlerts((previous) => previous.filter((alert) => alert.submissionId !== submission.submissionId));
-      if (data.stats) {
-        setBotStatus((prev) => ({
-          ...prev,
-          stats: data.stats,
-        }));
-      } else {
-        fetchStatusAndLogs();
-      }
       addToast('success', `Test record #${submission.submissionId} deleted and unlocked for re-testing.`);
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Could not delete the local test record.');
+      addToast('error', error instanceof Error ? error.message : 'Could not delete the test record.');
     }
   };
 
@@ -443,9 +432,7 @@ export default function App() {
       }
       if (!res.ok && submissions.length > 0) {
         await Promise.allSettled(
-          submissions.map((sub) =>
-            fetch(`/api/history/${encodeURIComponent(sub.submissionId || sub.id)}`, { method: 'DELETE' })
-          )
+          submissions.map((sub) => deleteSubmissionRemote(sub))
         );
       }
       setSubmissions([]);
@@ -473,55 +460,46 @@ export default function App() {
   ) => {
     try {
       const cleanId = (submissionId || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
-      const res = await fetch(`/api/history/${encodeURIComponent(cleanId)}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientVerification: verification, note }),
-      });
+      await updateSubmissionVerificationRemote(submissionId, verification, note);
 
-      if (res.ok) {
-        setSubmissions((prev) =>
-          prev.map((s) => {
-            const sClean = (s.submissionId || s.id || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
-            if (sClean === cleanId || s.submissionId === submissionId || s.id === submissionId) {
-              return {
-                ...s,
-                clientVerification: verification,
-                clientVerificationNote: note !== undefined ? note : s.clientVerificationNote,
-              };
-            }
-            return s;
-          })
-        );
-
-        if (selectedSubmission) {
-          const selClean = (selectedSubmission.submissionId || selectedSubmission.id || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
-          if (selClean === cleanId || selectedSubmission.submissionId === submissionId || selectedSubmission.id === submissionId) {
-            setSelectedSubmission((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    clientVerification: verification,
-                    clientVerificationNote: note !== undefined ? note : prev.clientVerificationNote,
-                  }
-                : null
-            );
+      setSubmissions((prev) =>
+        prev.map((s) => {
+          const sClean = (s.submissionId || s.id || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
+          if (sClean === cleanId || s.submissionId === submissionId || s.id === submissionId) {
+            return {
+              ...s,
+              clientVerification: verification,
+              clientVerificationNote: note !== undefined ? note : s.clientVerificationNote,
+            };
           }
-        }
+          return s;
+        })
+      );
 
-        const msg =
-          verification === 'verified'
-            ? `✓ Submission #${cleanId} marked as Verified (Sahi Hua Hai)`
-            : verification === 'unresolved'
-            ? `⚠ Submission #${cleanId} flagged as Unresolved (Masla Hai)`
-            : `Submission #${cleanId} reset to pending`;
-        addToast(verification === 'unresolved' ? 'error' : 'success', msg);
-      } else {
-        addToast('error', 'Failed to update verification status.');
+      if (selectedSubmission) {
+        const selClean = (selectedSubmission.submissionId || selectedSubmission.id || '').replace(/^(sub-|#|id:|row:)/i, '').trim();
+        if (selClean === cleanId || selectedSubmission.submissionId === submissionId || selectedSubmission.id === submissionId) {
+          setSelectedSubmission((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  clientVerification: verification,
+                  clientVerificationNote: note !== undefined ? note : prev.clientVerificationNote,
+                }
+              : null
+          );
+        }
       }
+
+      const msg =
+        verification === 'verified'
+          ? `✓ Submission #${cleanId} marked as Verified (Sahi Hua Hai)`
+          : verification === 'unresolved'
+          ? `⚠ Submission #${cleanId} flagged as Unresolved (Masla Hai)`
+          : `Submission #${cleanId} reset to pending`;
+      addToast(verification === 'unresolved' ? 'error' : 'success', msg);
     } catch (err) {
-      console.error('Error verifying submission:', err);
-      addToast('error', 'Could not reach server to update verification.');
+      addToast('error', 'Failed to update verification status.');
     }
   };
 

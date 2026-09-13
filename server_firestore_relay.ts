@@ -24,6 +24,7 @@ export interface RelayHooks {
   onStopBot: () => void;
   onPauseBot: () => void;
   onUpdateSettings: (settings: BotSettings) => void;
+  onDeleteSubmission?: (submissionId: string) => void;
 }
 
 let dbInstance: Firestore | null = null;
@@ -87,6 +88,23 @@ export function initFirestoreRelay(hooks: RelayHooks) {
     // 1. Initial State Push
     pushBotState(hooks.getBotStatus());
 
+    // 1b. Initial sync of existing submissions & alerts
+    try {
+      const existingSubs = hooks.getSubmissions();
+      for (const sub of existingSubs) {
+        syncSubmission(sub);
+      }
+      const existingAlerts = hooks.getAlerts();
+      for (const alert of existingAlerts) {
+        syncAlert(alert);
+      }
+      if (existingSubs.length > 0 || existingAlerts.length > 0) {
+        console.log(`[Firestore Relay] Synced ${existingSubs.length} submissions and ${existingAlerts.length} alerts to Firestore on startup.`);
+      }
+    } catch (err) {
+      console.warn('[Firestore Relay] Initial submission/alert sync warning:', err);
+    }
+
     // 2. Heartbeat loop (every 5 seconds)
     heartbeatTimer = setInterval(() => {
       pushBotState(hooks.getBotStatus());
@@ -119,6 +137,10 @@ export function initFirestoreRelay(hooks: RelayHooks) {
           } else if (action === 'UPDATE_SETTINGS' && data.payload) {
             hooks.onUpdateSettings(data.payload);
             resultMsg = 'Settings updated via cloud';
+          } else if (action === 'DELETE_SUBMISSION') {
+            const cleanId = (data.submissionId || data.id || '').replace(/^(sub-|#|id:|row:)/, '');
+            hooks.onDeleteSubmission?.(cleanId);
+            resultMsg = `Submission #${cleanId} unlocked locally`;
           }
 
           try {
@@ -195,7 +217,12 @@ export async function syncSubmission(submission: ProcessedSubmission) {
   if (!dbInstance) return;
   try {
     const docId = submission.id || `sub-${submission.submissionId || Date.now()}`;
-    await setDoc(doc(dbInstance, 'submissions', docId), submission, { merge: true });
+    const dateProcessed = submission.processedAt || (submission as any).dateProcessed || new Date().toISOString();
+    await setDoc(doc(dbInstance, 'submissions', docId), {
+      ...submission,
+      processedAt: dateProcessed,
+      dateProcessed: dateProcessed,
+    }, { merge: true });
   } catch (err) {
     console.error('[Firestore Relay] Error syncing submission:', err);
   }
@@ -208,7 +235,12 @@ export async function syncAlert(alert: AlertItem) {
   if (!dbInstance) return;
   try {
     const docId = alert.id || `alert-${Date.now()}`;
-    await setDoc(doc(dbInstance, 'alerts', docId), alert, { merge: true });
+    const detectedAt = alert.detectedAt || (alert as any).timestamp || new Date().toISOString();
+    await setDoc(doc(dbInstance, 'alerts', docId), {
+      ...alert,
+      detectedAt,
+      timestamp: detectedAt,
+    }, { merge: true });
   } catch (err) {
     console.error('[Firestore Relay] Error syncing alert:', err);
   }
@@ -221,8 +253,12 @@ export async function syncLogEntry(log: LogEntry) {
   if (!dbInstance) return;
   try {
     const docId = log.id || `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    await setDoc(doc(dbInstance, 'activity_logs', docId), log);
+    await setDoc(doc(dbInstance, 'activity_logs', docId), {
+      ...log,
+      serverTime: Date.now(),
+    });
   } catch (err) {
     // Non-blocking log sync
   }
 }
+
