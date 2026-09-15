@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar, type ActiveTab } from './components/Sidebar';
+import { BottomNavbar } from './components/BottomNavbar';
 import { DashboardView } from './views/DashboardView';
 import { SettingsView } from './views/SettingsView';
 import { HistoryView } from './views/HistoryView';
@@ -355,7 +356,7 @@ export default function App() {
             stats: data.stats,
           }));
         } else {
-          fetchStatusAndLogs();
+          handleRefresh();
         }
         addToast(
           'success',
@@ -391,7 +392,7 @@ export default function App() {
             stats: data.stats,
           }));
         } else {
-          fetchStatusAndLogs();
+          handleRefresh();
         }
         addToast('success', `All unresolved alerts marked as reviewed.`);
       } else {
@@ -585,11 +586,11 @@ export default function App() {
         {/* Main Content Area */}
         <main
           id="main-app-content-stage"
-          className={`flex-1 transition-all duration-300 w-full min-w-0 ${
+          className={`flex-1 transition-all duration-300 w-full min-w-0 pb-28 lg:pb-8 ${
             isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64 xl:pl-72'
           }`}
         >
-          <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8">
             {activeTab === 'dashboard' && (
               <DashboardView
                 botStatus={botStatus}
@@ -640,6 +641,21 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      {/* Floating Liquid Glass Pill 2.0 Bottom Navbar (Mobile & Tablet) */}
+      <BottomNavbar
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          if (tab === 'history') setHistoryInitialFilter('All');
+          setActiveTab(tab);
+        }}
+        botStatus={botStatus.status}
+        unresolvedAlertsCount={unresolvedAlertsCount}
+        onStartBot={handleStartBot}
+        onPauseBot={handlePauseBot}
+        onStopBot={handleStopBot}
+        isLoadingAction={isLoadingAction}
+      />
 
       {/* Submission Detail Modal */}
       <SubmissionDetailModal

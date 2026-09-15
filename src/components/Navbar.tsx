@@ -137,10 +137,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center">
           <div
             id="navbar-bot-status-pill"
-            className={`flex items-center gap-2 px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold border ${statusConfig.badgeClass} shadow-sm backdrop-blur-md`}
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border ${statusConfig.badgeClass} shadow-sm backdrop-blur-md`}
           >
             <span className={`w-2 h-2 rounded-full ${statusConfig.dotClass}`} />
-            <span className="truncate">{statusConfig.label}</span>
+            <span className="truncate hidden sm:inline">{statusConfig.label}</span>
+            <span className="truncate sm:hidden font-mono uppercase text-[10px] font-bold">{status}</span>
           </div>
         </div>
 

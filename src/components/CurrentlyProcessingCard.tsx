@@ -69,58 +69,58 @@ export const CurrentlyProcessingCard: React.FC<CurrentlyProcessingCardProps> = (
   return (
     <div
       id="dashboard-currently-processing-card"
-      className="glass-panel p-6 rounded-3xl overflow-hidden relative shadow-lg"
+      className="glass-panel p-4 sm:p-6 rounded-3xl overflow-hidden relative shadow-lg"
     >
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/25 flex items-center justify-center text-purple-600 dark:text-purple-400">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-slate-200/80 dark:border-white/5">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/25 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
             {current ? (
-              <Activity className="w-5 h-5 animate-pulse text-purple-600 dark:text-purple-400" />
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse text-purple-600 dark:text-purple-400" />
             ) : (
-              <Clock className="w-5 h-5 text-slate-400" />
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                Live Pipeline Execution Trace
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                Live Pipeline Execution
               </h3>
               {current ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                  Active Submission
+                  Active
                 </span>
               ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
                   Standby
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {current
-                ? `Live execution trace for submission #${current.submissionId}`
+                ? `Trace for #${current.submissionId}`
                 : 'Bot runner idle or waiting for next batch cycle'}
             </p>
           </div>
         </div>
 
         {current && (
-          <div className="flex items-center gap-4 text-xs font-mono">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs font-mono">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 block uppercase tracking-wider">
                 Batch Progress
               </span>
-              <span className="font-bold text-slate-900 dark:text-white">
+              <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                 Row {current.batchCurrent} of {current.batchTotal}
               </span>
             </div>
-            <div className="h-7 w-[1px] bg-slate-200 dark:bg-white/10" />
+            <div className="h-6 sm:h-7 w-[1px] bg-slate-200 dark:bg-white/10" />
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 block uppercase tracking-wider">
                 Elapsed
               </span>
-              <span className="font-bold text-purple-600 dark:text-purple-300">{elapsedSec}s</span>
+              <span className="font-bold text-purple-600 dark:text-purple-300 text-xs sm:text-sm">{elapsedSec}s</span>
             </div>
           </div>
         )}
@@ -128,14 +128,14 @@ export const CurrentlyProcessingCard: React.FC<CurrentlyProcessingCardProps> = (
 
       {/* Content Area */}
       {current ? (
-        <div className="pt-5 space-y-6">
+        <div className="pt-4 sm:pt-5 space-y-5 sm:space-y-6">
           {/* Submission Info Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl glass-inset">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-2xl glass-inset">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                 Submission ID
               </span>
-              <div className="font-mono font-black text-lg text-slate-900 dark:text-white mt-0.5">
+              <div className="font-mono font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">
                 #{current.submissionId}
               </div>
             </div>

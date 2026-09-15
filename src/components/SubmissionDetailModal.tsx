@@ -155,54 +155,54 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   return (
     <div
       id="submission-detail-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md overflow-hidden"
       onClick={onClose}
     >
       <div
         id="submission-detail-modal-card"
-        className="relative w-full max-w-5xl bg-white dark:bg-[#121224] border border-slate-200 dark:border-purple-500/20 rounded-2xl shadow-2xl my-8 overflow-hidden text-slate-800 dark:text-slate-200"
+        className="relative w-full max-w-5xl bg-white dark:bg-[#121224] border-t sm:border border-slate-200 dark:border-purple-500/20 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden text-slate-800 dark:text-slate-200 flex flex-col max-h-[92vh] sm:max-h-[88vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-6 border-b border-slate-200 dark:border-purple-500/15 bg-slate-50 dark:bg-gradient-to-r dark:from-purple-950/30 dark:via-transparent dark:to-purple-950/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-              <FileText className="w-5 h-5" />
+        {/* Modal Sticky Header */}
+        <div className="sticky top-0 z-20 flex items-center justify-between gap-3 p-3.5 sm:p-5 border-b border-slate-200 dark:border-purple-500/15 bg-white/95 dark:bg-[#121224]/95 backdrop-blur-md">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
                   Submission #{submission.submissionId}
                 </h2>
                 {getStatusBadge(submission.status)}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                <span>{submission.supplierName}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="truncate max-w-[140px] sm:max-w-none">{submission.supplierName}</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="flex items-center gap-1 font-mono text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                   <Clock className="w-3 h-3" />
-                  {new Date(submission.processedAt).toLocaleString('en-US', {
-                    dateStyle: 'medium',
-                    timeStyle: 'medium',
+                  {new Date(submission.processedAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
                   })}
                 </span>
-                <span>•</span>
-                <span className="text-purple-600 dark:text-purple-400 font-mono text-[11px]">
-                  {submission.executionTimeMs}ms execution
+                <span className="hidden sm:inline">•</span>
+                <span className="text-purple-600 dark:text-purple-400 font-mono text-[10px] sm:text-[11px]">
+                  {submission.executionTimeMs}ms
                 </span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             <a
               href={`https://admin.velux.quantum-h.com/admin/submissions/${submission.submissionId.replace('id:', '').trim()}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 transition-colors"
             >
-              <span>Open in Velux Portal</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Portal</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
             <button
               id="close-submission-modal-btn"
@@ -215,7 +215,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           {/* Client Verification Action Bar */}
           {/* Client Verification Action Bar */}
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-gradient-to-r dark:from-[#171732] dark:via-[#14142a] dark:to-[#171732] border border-slate-200 dark:border-purple-500/25 flex flex-wrap items-center justify-between gap-4 shadow-sm">
@@ -261,32 +261,32 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
               <button
                 id="modal-client-verify-btn"
                 onClick={() => handleVerify('verified')}
                 disabled={updatingVerification}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${
+                className={`flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md ${
                   clientVerification === 'verified'
                     ? 'bg-emerald-600 text-white ring-2 ring-emerald-400/50'
                     : 'bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30'
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>✓ Sahi Hua Hai (Mark Verified)</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>✓ Sahi Hua Hai</span>
               </button>
               <button
                 id="modal-client-unresolved-btn"
                 onClick={() => handleVerify('unresolved')}
                 disabled={updatingVerification}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${
+                className={`flex-1 sm:flex-initial px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md ${
                   clientVerification === 'unresolved'
                     ? 'bg-rose-600 text-white ring-2 ring-rose-400/50'
                     : 'bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30'
                 }`}
               >
-                <XCircle className="w-4 h-4" />
-                <span>⚠ Masla Hai (Unresolved)</span>
+                <XCircle className="w-4 h-4 shrink-0" />
+                <span>⚠ Masla Hai</span>
               </button>
             </div>
           </div>
@@ -761,12 +761,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="flex items-center justify-between p-4 px-6 border-t border-slate-200 dark:border-purple-500/15 bg-slate-50 dark:bg-black/40">
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Document ID: <span className="font-mono text-slate-900 dark:text-slate-300 font-bold">{submission.id}</span>
+        {/* Modal Sticky Footer */}
+        <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 px-4 sm:px-6 border-t border-slate-200 dark:border-purple-500/15 bg-white/95 dark:bg-[#121224]/95 backdrop-blur-md">
+          <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
+            ID: <span className="font-mono text-slate-900 dark:text-slate-300 font-bold">{submission.submissionId || submission.id}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {onDeleteSubmission && (
               <button
                 id="modal-footer-delete-btn"
@@ -774,18 +774,18 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   onDeleteSubmission(submission);
                   onClose();
                 }}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-100 dark:bg-rose-500/20 hover:bg-rose-600 text-rose-700 dark:text-rose-300 hover:text-white border border-rose-300 dark:border-rose-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold bg-rose-100 dark:bg-rose-500/20 hover:bg-rose-600 text-rose-700 dark:text-rose-300 hover:text-white border border-rose-300 dark:border-rose-500/40 transition-all flex items-center gap-1.5 shadow-sm"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete & Reset for Testing</span>
+                <span>Reset Test</span>
               </button>
             )}
             <button
               id="modal-footer-close-btn"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 transition-all"
+              className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 transition-all"
             >
-              Close Details
+              Close
             </button>
           </div>
         </div>
@@ -794,41 +794,42 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
       {/* Fullscreen Screenshot Lightbox */}
       {zoomedImage && (
         <div
-          className="fixed inset-0 z-[60] bg-black/95 flex flex-col p-4 animate-in fade-in"
+          className="fixed inset-0 z-[60] bg-black/95 flex flex-col p-3 sm:p-4 animate-in fade-in"
           onClick={() => setZoomedImage(null)}
         >
-          <div className="flex items-center justify-between pb-3 border-b border-white/10" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <span className="font-mono font-bold text-white text-sm">
-                {zoomedTitle || `Full Resolution Snapshot — #${submission.submissionId}`}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-white/10" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="font-mono font-bold text-white text-xs sm:text-sm truncate">
+                {zoomedTitle || `Snapshot — #${submission.submissionId}`}
               </span>
-              <span className="text-xs text-slate-400">
-                (Click ESC or Close to exit full resolution inspection)
+              <span className="text-[10px] text-slate-400 hidden sm:inline">
+                (Click ESC or Close to exit)
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <a
                 href={zoomedImage}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/30 text-purple-200 border border-purple-500/40 hover:bg-purple-600/50 transition-colors flex items-center gap-1.5"
+                className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/30 text-purple-200 border border-purple-500/40 hover:bg-purple-600/50 transition-colors flex items-center gap-1"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Open in New Tab</span>
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden sm:inline">Open in New Tab</span>
+                <span className="sm:hidden">Full</span>
               </a>
               <button
                 onClick={() => setZoomedImage(null)}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
+                className="px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
               >
-                Close (ESC)
+                Close
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex-1 overflow-auto flex items-center justify-center p-1 sm:p-2" onClick={(e) => e.stopPropagation()}>
             <img
               src={zoomedImage}
               alt="Full viewport snapshot"
-              className="max-w-none w-auto max-h-none rounded-lg shadow-2xl border border-white/10"
+              className="max-w-full w-auto max-h-[82vh] sm:max-h-none sm:max-w-none object-contain rounded-lg shadow-2xl border border-white/10"
             />
           </div>
         </div>

@@ -166,7 +166,7 @@ export function subscribeSubmissions(
             processedAt,
             dateProcessed: processedAt,
           };
-        }) as ProcessedSubmission[];
+        }) as unknown as ProcessedSubmission[];
 
         // Robust client-side sort descending by processedAt or dateProcessed
         subs.sort((a, b) => {

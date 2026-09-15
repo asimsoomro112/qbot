@@ -106,37 +106,37 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   return (
     <div
       id="dashboard-bot-status-indicator-card"
-      className="glass-panel p-6 rounded-3xl relative overflow-hidden transition-all duration-300 shadow-xl"
+      className="glass-panel p-4 sm:p-6 rounded-3xl relative overflow-hidden transition-all duration-300 shadow-xl"
     >
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
         {/* Visual State & Description */}
-        <div className="flex items-start sm:items-center gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
           <div className="relative shrink-0">
             <div
-              className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-inner transition-colors ${details.iconBg}`}
+              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border flex items-center justify-center shadow-inner transition-colors ${details.iconBg}`}
             >
-              <Icon className={`w-7 h-7 ${details.glowText}`} />
+              <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${details.glowText}`} />
             </div>
 
             {/* Pulsing state ring */}
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 sm:h-4 sm:w-4">
               {status === 'running' && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               )}
               <span
-                className={`relative inline-flex rounded-full h-4 w-4 border-2 border-white dark:border-[#0f1120] ${details.dotBg}`}
+                className={`relative inline-flex rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-2 border-white dark:border-[#0f1120] ${details.dotBg}`}
               />
             </span>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                 {details.title}
               </h2>
               <span
                 id="bot-status-badge"
-                className={`px-3 py-0.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase border shadow-sm ${details.badgeClass}`}
+                className={`px-2.5 sm:px-3 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-bold tracking-wider uppercase border shadow-sm ${details.badgeClass}`}
               >
                 {details.badge}
               </span>
@@ -146,32 +146,32 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
               {details.subtitle}
             </p>
 
-            <div className="flex items-center gap-3 pt-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                State changed: <span className="font-semibold text-slate-700 dark:text-slate-200">{formattedTime}</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                State: <span className="font-semibold text-slate-700 dark:text-slate-200">{formattedTime}</span>
               </span>
-              <span>•</span>
-              <span className="text-purple-600 dark:text-purple-400 font-semibold">Playwright Engine v2.5</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="text-purple-600 dark:text-purple-400 font-semibold">Playwright v2.5</span>
             </div>
           </div>
         </div>
 
-        {/* Big Action Controls */}
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        {/* Big Action Controls — 3-Column Responsive Grid on Mobile */}
+        <div className="grid grid-cols-3 gap-2 w-full lg:flex lg:w-auto lg:items-center lg:gap-3 shrink-0">
           {/* Start Bot Button */}
           <button
             id="btn-start-bot"
             onClick={onStart}
             disabled={status === 'running' || isLoadingAction}
-            className={`flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-lg ${
               status === 'running'
                 ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
                 : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] border border-emerald-400/30'
             }`}
           >
-            <Play className="w-4 h-4 fill-current" />
-            <span>Start Runner</span>
+            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current shrink-0" />
+            <span className="truncate">Start</span>
           </button>
 
           {/* Pause Bot Button */}
@@ -179,14 +179,14 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             id="btn-pause-bot"
             onClick={onPause}
             disabled={status !== 'running' || isLoadingAction}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold transition-all shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
               status !== 'running'
                 ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
                 : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >
-            <Pause className="w-4 h-4" />
-            <span>Pause</span>
+            <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Pause</span>
           </button>
 
           {/* Stop Bot Button */}
@@ -194,14 +194,14 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             id="btn-stop-bot"
             onClick={onStop}
             disabled={status === 'stopped' || isLoadingAction}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold transition-all shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
               status === 'stopped'
                 ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
                 : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-500/30 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >
-            <Square className="w-4 h-4 fill-current" />
-            <span>Stop Runner</span>
+            <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current shrink-0" />
+            <span className="truncate">Stop</span>
           </button>
         </div>
       </div>

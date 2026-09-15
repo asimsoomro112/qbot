@@ -18,7 +18,7 @@ export const Toast: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   return (
     <div
       id="global-toast-container"
-      className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none"
+      className="fixed bottom-24 sm:bottom-6 right-3 sm:right-6 left-3 sm:left-auto z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none"
     >
       {toasts.map((toast) => {
         let borderBg = 'border-purple-500/40 bg-[#16162c] text-purple-300';

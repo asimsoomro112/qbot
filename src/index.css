@@ -184,3 +184,53 @@
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.5);
 }
+
+/* ==========================================================================
+   Liquid Glass Pill 2.0 Navigation Bar
+   ========================================================================== */
+.liquid-glass-pill-2 {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 16px 36px -10px rgba(15, 23, 42, 0.18),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .liquid-glass-pill-2 {
+  background: rgba(14, 16, 28, 0.78);
+  backdrop-filter: blur(32px) saturate(210%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 24px 48px -12px rgba(0, 0, 0, 0.75),
+    0 0 24px -4px rgba(168, 85, 247, 0.22),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Fluid active indicator pill inside the liquid bar */
+.liquid-active-pill-glow {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.95) 0%, rgba(99, 102, 241, 0.95) 100%);
+  box-shadow: 
+    0 6px 20px -2px rgba(147, 51, 234, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.liquid-specular-sheen {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+}
+
+.dark .liquid-specular-sheen {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.18) 50%, transparent 100%);
+}
+
+/* Safe area padding helper for modern mobile devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+

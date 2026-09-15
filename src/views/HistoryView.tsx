@@ -222,9 +222,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   return (
     <div id="view-history-container" className="space-y-6 pb-16">
       {/* Title & Top Export Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Submission History & Audit Trail
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -232,34 +233,34 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           {onClearAllHistory && submissions.length > 0 && (
             <button
               id="btn-clear-all-history"
               onClick={onClearAllHistory}
               title="Clear all test submissions and unlock submitted_submissions.txt for new test runs"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 hover:border-rose-400/50 transition-all shadow-sm shrink-0"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold bg-rose-500/10 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 hover:border-rose-400/50 transition-all shadow-sm shrink-0"
             >
-              <Trash2 className="w-4 h-4 text-rose-500" />
-              <span>Reset / Clear All Records</span>
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500" />
+              <span>Reset Records</span>
             </button>
           )}
           <button
             id="btn-export-csv"
             onClick={handleExportCSV}
             disabled={filteredSubmissions.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-purple-600/10 dark:bg-purple-600/20 hover:bg-purple-600/20 dark:hover:bg-purple-600/30 text-purple-700 dark:text-purple-200 border border-purple-500/30 hover:border-purple-400/50 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold bg-purple-600/10 dark:bg-purple-600/20 hover:bg-purple-600/20 dark:hover:bg-purple-600/30 text-purple-700 dark:text-purple-200 border border-purple-500/30 hover:border-purple-400/50 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
-            <Download className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
             <span>Export CSV ({filteredSubmissions.length})</span>
           </button>
         </div>
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="p-4 rounded-2xl glass-panel shadow-lg flex flex-wrap items-center justify-between gap-3">
+      <div className="p-3.5 sm:p-4 rounded-2xl glass-panel shadow-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3">
         {/* Search input */}
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             id="history-search-input"
@@ -275,10 +276,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 md:flex md:flex-wrap items-center gap-2 text-xs">
           {/* Status Filter */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <Filter className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
             <select
               id="history-status-filter"
               value={statusFilter}
@@ -286,22 +287,22 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 setStatusFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none"
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none w-full text-xs"
             >
               <option value="All" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">All Statuses</option>
-              <option value="Needs Review" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">⚠️ Needs Review (Errors, Mismatches & Incomplete)</option>
-              <option value="Success" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Success (All Products Verified)</option>
-              <option value="Incomplete" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Incomplete (Basket Issues)</option>
+              <option value="Needs Review" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">⚠️ Needs Review</option>
+              <option value="Success" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Success</option>
+              <option value="Incomplete" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Incomplete</option>
               <option value="Mismatch" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Mismatches</option>
               <option value="Error" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Errors</option>
               <option value="Skipped" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Skipped</option>
-              <option value="Multiple Invoices Submitted" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Multiple Invoices Submitted</option>
+              <option value="Multiple Invoices Submitted" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Multiple Invoices</option>
             </select>
           </div>
 
           {/* Client Verification Filter */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <select
               id="history-verification-filter"
               value={verificationFilter}
@@ -309,18 +310,18 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 setVerificationFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none"
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none w-full text-xs"
             >
               <option value="All" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">All Verifications</option>
-              <option value="Verified" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">✓ Sahi Hua Hai (Verified)</option>
-              <option value="Unresolved" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">⚠ Unresolved (Masla Hai)</option>
-              <option value="Pending" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Pending Proof Check</option>
+              <option value="Verified" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">✓ Sahi Hua Hai</option>
+              <option value="Unresolved" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">⚠ Unresolved</option>
+              <option value="Pending" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Pending Check</option>
             </select>
           </div>
 
           {/* Date Filter */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5">
-            <Calendar className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <Calendar className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
             <select
               id="history-date-filter"
               value={dateFilter}
@@ -328,7 +329,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 setDateFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none"
+              className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none w-full text-xs"
             >
               <option value="all" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">All Dates</option>
               <option value="today" className="bg-white dark:bg-[#141428] text-slate-800 dark:text-slate-200">Today</option>
@@ -338,9 +339,162 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
       </div>
 
-      {/* Submissions Table */}
+      {/* Submissions Container (Dual Mode: Mobile Cards + Desktop Table) */}
       <div className="rounded-2xl glass-panel shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Submission Cards (Screen < 768px / Vertical Video) */}
+        <div className="block md:hidden p-3 space-y-3">
+          {isLoading ? (
+            <div className="p-8 text-center text-slate-500">
+              <div className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs">Loading submission history...</span>
+              </div>
+            </div>
+          ) : paginatedItems.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400 space-y-2">
+              <FileSpreadsheet className="w-10 h-10 text-purple-500/50 mx-auto" />
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                No submissions found.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {submissions.length === 0
+                  ? 'Start the bot from the dashboard to begin automated invoice verification.'
+                  : 'No submissions matched your current search filters.'}
+              </p>
+            </div>
+          ) : (
+            paginatedItems.map((sub) => {
+              const isNeedsReview =
+                sub.status === 'Needs Review' ||
+                sub.status === 'Mismatch' ||
+                sub.status === 'Error' ||
+                sub.clientVerification === 'unresolved';
+              const rawDate = sub.processedAt || (sub as any).dateProcessed;
+              const dateObj = rawDate ? new Date(rawDate) : new Date();
+              const validDate = !isNaN(dateObj.getTime());
+
+              return (
+                <div
+                  key={`mobile-sub-${sub.id}`}
+                  onClick={() => onSelectSubmission(sub)}
+                  className={`glass-panel p-3.5 rounded-2xl space-y-2.5 transition-all shadow-md active:scale-[0.99] border ${
+                    isNeedsReview
+                      ? 'border-l-4 border-l-rose-500 bg-rose-500/5 border-slate-200/80 dark:border-white/10'
+                      : 'border-slate-200/80 dark:border-white/10'
+                  }`}
+                >
+                  {/* Top Bar: ID, Date, Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-black text-slate-900 dark:text-white text-sm">
+                        #{sub.submissionId}
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        {validDate
+                          ? `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                          : 'Recent'}
+                      </span>
+                    </div>
+                    {getStatusBadge(sub.status)}
+                  </div>
+
+                  {/* Supplier & Amount */}
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {sub.supplierName}
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Inv: <strong className="text-slate-800 dark:text-slate-200">{sub.invoiceNumber}</strong>
+                      </span>
+                      {sub.extractedPdfData?.totalAmount > 0 && (
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          €{sub.extractedPdfData.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action & Verification Row */}
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    {/* Client Verification status */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {sub.clientVerification === 'verified' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span>✓ Sahi</span>
+                        </span>
+                      ) : sub.clientVerification === 'unresolved' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                          <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                          <span>⚠ Masla</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>Pending</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {onVerifySubmission && (
+                        <>
+                          <button
+                            id={`mobile-tick-verify-${sub.submissionId}`}
+                            onClick={() => onVerifySubmission(sub.submissionId, sub.clientVerification === 'verified' ? 'pending' : 'verified')}
+                            title="Mark Sahi Hua Hai"
+                            className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                              sub.clientVerification === 'verified'
+                                ? 'bg-emerald-500 text-white shadow-sm'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            id={`mobile-flag-unresolved-${sub.submissionId}`}
+                            onClick={() => onVerifySubmission(sub.submissionId, sub.clientVerification === 'unresolved' ? 'pending' : 'unresolved')}
+                            title="Mark Masla Hai"
+                            className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                              sub.clientVerification === 'unresolved'
+                                ? 'bg-rose-500 text-white shadow-sm'
+                                : 'bg-rose-500/10 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                            }`}
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+
+                      {(sub.receiptScreenshotUrl || sub.basketScreenshotUrl || sub.screenshotUrl) && (
+                        <button
+                          onClick={() => onSelectSubmission(sub)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25"
+                        >
+                          <Camera className="w-3 h-3 text-emerald-500" />
+                          <span>Proofs</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => onSelectSubmission(sub)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-500/10 hover:bg-purple-600 text-purple-700 dark:text-purple-300 hover:text-white transition-all border border-purple-500/20"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Inspect</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Full Table (Screens >= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table id="history-submissions-table" className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-purple-950/20 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
