@@ -15,6 +15,7 @@ import type {
   LogEntry,
   ProcessedSubmission,
   AlertItem,
+  BotRunMode,
 } from './types';
 import {
   subscribeBotStatus,
@@ -42,6 +43,8 @@ const DEFAULT_STATUS: BotStatus = {
   currentlyProcessing: null,
   stats: {
     totalToday: 0,
+    totalRedacted: 0,
+    totalDataFilled: 0,
     matchedSuccessfully: 0,
     mismatchesFound: 0,
     errorsEncountered: 0,
@@ -120,6 +123,7 @@ export default function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<ProcessedSubmission | null>(null);
   const [historyInitialFilter, setHistoryInitialFilter] = useState<'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped'>('All');
+  const [historyInitialOperation, setHistoryInitialOperation] = useState<'all' | 'redaction' | 'data_fill'>('all');
 
   // Theme & Layout States
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -248,14 +252,15 @@ export default function App() {
   };
 
   // Action handlers using Unified Cloud & Local Dispatcher
-  const handleStartBot = async () => {
+  const handleStartBot = async (mode: BotRunMode = 'all') => {
     setIsLoadingAction(true);
     try {
-      const res = await sendStartCommand();
+      const res = await sendStartCommand(mode);
       if (res.success) {
         setBotStatus((prev) => ({
           ...prev,
           status: 'running',
+          mode,
           lastStatusChange: new Date().toISOString(),
         }));
         addToast('success', res.message);
@@ -443,6 +448,8 @@ export default function App() {
         stats: {
           ...prev.stats,
           totalToday: 0,
+          totalRedacted: 0,
+          totalDataFilled: 0,
           matchedSuccessfully: 0,
           mismatchesFound: 0,
           errorsEncountered: 0,
@@ -571,8 +578,16 @@ export default function App() {
         <Sidebar
           activeTab={activeTab}
           onSelectTab={(tab) => {
-            if (tab === 'history') setHistoryInitialFilter('All');
+            if (tab === 'history') {
+              setHistoryInitialFilter('All');
+              setHistoryInitialOperation('all');
+            }
             setActiveTab(tab);
+          }}
+          onSelectOperation={(op) => {
+            setHistoryInitialOperation(op);
+            setHistoryInitialFilter('All');
+            setActiveTab('history');
           }}
           botStatus={botStatus}
           unresolvedAlertsCount={unresolvedAlertsCount}
@@ -595,6 +610,7 @@ export default function App() {
               <DashboardView
                 botStatus={botStatus}
                 logs={logs}
+                submissions={submissions}
                 onStartBot={handleStartBot}
                 onStopBot={handleStopBot}
                 onPauseBot={handlePauseBot}
@@ -602,8 +618,9 @@ export default function App() {
                 onClearLogs={handleClearLogs}
                 onOpenSubmissionModal={handleOpenSubmissionModalById}
                 onNavigateToAlerts={() => setActiveTab('alerts')}
-                onNavigateToHistory={(filter) => {
+                onNavigateToHistory={(filter, operation) => {
                   setHistoryInitialFilter(filter || 'All');
+                  if (operation) setHistoryInitialOperation(operation);
                   setActiveTab('history');
                 }}
               />
@@ -627,6 +644,7 @@ export default function App() {
                 onClearAllHistory={handleClearAllHistory}
                 onVerifySubmission={handleVerifySubmission}
                 initialStatusFilter={historyInitialFilter}
+                initialOperation={historyInitialOperation}
               />
             )}
 

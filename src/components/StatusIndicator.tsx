@@ -10,17 +10,21 @@ import {
   RotateCcw,
   Sparkles,
   Zap,
+  FileEdit,
+  Database,
+  Layers,
 } from 'lucide-react';
-import type { BotStatusState, CurrentlyProcessing } from '../types';
+import type { BotStatusState, CurrentlyProcessing, BotRunMode } from '../types';
 
 interface StatusIndicatorProps {
   status: BotStatusState;
   lastStatusChange: string;
-  onStart: () => void;
+  onStart: (mode?: BotRunMode) => void;
   onStop: () => void;
   onPause: () => void;
   isLoadingAction: boolean;
   currentlyProcessing?: CurrentlyProcessing | null;
+  currentMode?: BotRunMode;
 }
 
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
@@ -31,21 +35,33 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   onPause,
   isLoadingAction,
   currentlyProcessing,
+  currentMode = 'all',
 }) => {
   const getStatusDetails = () => {
+    const modeName =
+      currentMode === 'redact_only'
+        ? 'Redact Only'
+        : currentMode === 'data_required_only'
+        ? 'Data Required'
+        : 'Full Pipeline';
+
     switch (status) {
       case 'running': {
         const hasSub = !!currentlyProcessing?.submissionId;
         return {
           title: hasSub
             ? `Processing Row #${currentlyProcessing.submissionId}`
-            : 'Automation Runner is Active',
+            : `Automation Runner Active (${modeName})`,
           subtitle: hasSub
             ? `Current Step: ${currentlyProcessing.stepLabel || 'Working in portal'} ${
                 currentlyProcessing.supplierName ? `• Supplier: ${currentlyProcessing.supplierName}` : ''
               }`
-            : 'Continuously monitoring portal queue, downloading receipts, and cross-checking invoice details.',
-          badge: hasSub ? `ROW #${currentlyProcessing.submissionId}` : 'RUNNING',
+            : currentMode === 'redact_only'
+            ? 'Monitoring Pending (Unredacted) queue, auto-redacting pricing values with Gemini Vision.'
+            : currentMode === 'data_required_only'
+            ? 'Processing Data Required queue, matching suppliers & eligible VELUX product codes.'
+            : 'Continuously running full pipeline: auto-redacting receipts and processing data required submissions.',
+          badge: hasSub ? `ROW #${currentlyProcessing.submissionId}` : `RUNNING • ${modeName.toUpperCase()}`,
           dotBg: 'bg-emerald-500',
           ringBg: 'ring-emerald-500/25',
           glowText: 'text-emerald-600 dark:text-emerald-400',
@@ -82,7 +98,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       default:
         return {
           title: 'Automation Runner Standby',
-          subtitle: 'Browser automation engine is idle. Ready to initiate automated verification or scheduled batches.',
+          subtitle: 'Choose a mode below to start: Full Pipeline (Redact + Data), Redact Only, or Data Required Only.',
           badge: 'STANDBY',
           dotBg: 'bg-slate-400',
           ringBg: 'ring-slate-400/25',
@@ -108,7 +124,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       id="dashboard-bot-status-indicator-card"
       className="glass-panel p-4 sm:p-6 rounded-3xl relative overflow-hidden transition-all duration-300 shadow-xl"
     >
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+      <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 sm:gap-6">
         {/* Visual State & Description */}
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
           <div className="relative shrink-0">
@@ -157,36 +173,82 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
           </div>
         </div>
 
-        {/* Big Action Controls — 3-Column Responsive Grid on Mobile */}
-        <div className="grid grid-cols-3 gap-2 w-full lg:flex lg:w-auto lg:items-center lg:gap-3 shrink-0">
-          {/* Start Bot Button */}
-          <button
-            id="btn-start-bot"
-            onClick={onStart}
-            disabled={status === 'running' || isLoadingAction}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-lg ${
-              status === 'running'
-                ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
-                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] border border-emerald-400/30'
-            }`}
-          >
-            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current shrink-0" />
-            <span className="truncate">Start</span>
-          </button>
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full xl:w-auto xl:justify-end shrink-0">
+          {status !== 'running' ? (
+            <>
+              {/* Button 1: Start All (Full Pipeline) */}
+              <button
+                id="btn-start-all"
+                onClick={() => onStart('all')}
+                disabled={isLoadingAction}
+                className="group relative flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] border border-emerald-400/30"
+                title="Start Full Pipeline: Auto-redacts pending receipts first, then processes Data Required submissions"
+              >
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 fill-current group-hover:rotate-12 transition-transform" />
+                <div className="flex flex-col text-left leading-none">
+                  <span className="truncate">Start All</span>
+                  <span className="text-[9px] font-normal opacity-85 mt-0.5">Redact + Data</span>
+                </div>
+              </button>
+
+              {/* Button 2: Start Redact Only */}
+              <button
+                id="btn-start-redact"
+                onClick={() => onStart('redact_only')}
+                disabled={isLoadingAction}
+                className="group relative flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-md bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] border border-purple-400/30"
+                title="Start Redaction Only: Auto-redacts pricing values on Pending (Unredacted) queue only"
+              >
+                <FileEdit className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="flex flex-col text-left leading-none">
+                  <span className="truncate">Start Redact</span>
+                  <span className="text-[9px] font-normal opacity-85 mt-0.5">Redact Only</span>
+                </div>
+              </button>
+
+              {/* Button 3: Start Data Required Only */}
+              <button
+                id="btn-start-data-required"
+                onClick={() => onStart('data_required_only')}
+                disabled={isLoadingAction}
+                className="group relative flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-md bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] border border-sky-400/30"
+                title="Start Data Required Only: Directly processes Data Required submissions only"
+              >
+                <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="flex flex-col text-left leading-none">
+                  <span className="truncate">Start Data Req</span>
+                  <span className="text-[9px] font-normal opacity-85 mt-0.5">Data Only</span>
+                </div>
+              </button>
+            </>
+          ) : (
+            /* When Running: Mode indicator pill */
+            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>
+                {currentMode === 'redact_only'
+                  ? 'Redact Mode'
+                  : currentMode === 'data_required_only'
+                  ? 'Data Req Mode'
+                  : 'Full Mode'}
+              </span>
+            </div>
+          )}
 
           {/* Pause Bot Button */}
           <button
             id="btn-pause-bot"
             onClick={onPause}
             disabled={status !== 'running' || isLoadingAction}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
               status !== 'running'
                 ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
                 : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >
             <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="truncate">Pause</span>
+            <span>Pause</span>
           </button>
 
           {/* Stop Bot Button */}
@@ -194,14 +256,14 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             id="btn-stop-bot"
             onClick={onStop}
             disabled={status === 'stopped' || isLoadingAction}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
               status === 'stopped'
                 ? 'opacity-40 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-transparent'
                 : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-500/30 hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >
             <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current shrink-0" />
-            <span className="truncate">Stop</span>
+            <span>Stop</span>
           </button>
         </div>
       </div>

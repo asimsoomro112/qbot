@@ -11,19 +11,28 @@ import {
   ShieldCheck,
   Split,
   CalendarX,
+  Scissors,
+  FileSpreadsheet,
+  Play,
 } from 'lucide-react';
-import type { BotStats } from '../types';
+import type { BotStats, BotRunMode } from '../types';
 
 interface StatCardsProps {
   stats: BotStats;
   onNavigateToAlerts?: () => void;
-  onNavigateToHistory?: (filter?: 'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped') => void;
+  onNavigateToHistory?: (filter?: 'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped', operation?: 'all' | 'redaction' | 'data_fill') => void;
+  onSelectOperation?: (operation: 'all' | 'redaction' | 'data_fill') => void;
+  onStartBot?: (mode?: BotRunMode) => void;
+  isLoadingAction?: boolean;
 }
 
 export const StatCards: React.FC<StatCardsProps> = ({
   stats,
   onNavigateToAlerts,
   onNavigateToHistory,
+  onSelectOperation,
+  onStartBot,
+  isLoadingAction,
 }) => {
   const matchRate =
     stats.totalToday > 0
@@ -42,6 +51,136 @@ export const StatCards: React.FC<StatCardsProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* 0. Dedicated Dual Operations Hero Banner: Redaction vs Data Required */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+        {/* HERO CARD 1: ONLY REDACTION (PHASE 1) */}
+        <div
+          id="hero-card-only-redaction"
+          className="glass-panel p-4 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-slate-900/15 to-transparent flex flex-col justify-between group shadow-lg"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <Scissors className="w-3 h-3" /> Phase 1: Only Redaction
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 hidden sm:inline">Pending & Redacted</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2">
+                Redaction Automation Queue
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                Original receipts downloaded, price & IBAN covered on right side, replaced & closed on portal.
+              </p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0 group-hover:scale-105 transition-transform shadow-md shadow-amber-500/10">
+              <Scissors className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div
+              onClick={() => onSelectOperation ? onSelectOperation('redaction') : onNavigateToHistory?.('All', 'redaction')}
+              className="cursor-pointer flex items-baseline gap-2 group-hover:brightness-110"
+              title="Click to filter records for only redactions"
+            >
+              <span className="text-3xl sm:text-4xl font-black text-amber-500 dark:text-amber-400 font-mono tracking-tight">
+                {stats.totalRedacted ?? 0}
+              </span>
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                invoices / submissions redacted
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectOperation ? onSelectOperation('redaction') : onNavigateToHistory?.('All', 'redaction')}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Redacted</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
+              {onStartBot && (
+                <button
+                  type="button"
+                  onClick={() => onStartBot('redact_only')}
+                  disabled={isLoadingAction}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 transition-all shadow-md shadow-amber-600/25 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  title="Run Phase 1 bot to redact all unredacted invoices"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Start Redact Only</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* HERO CARD 2: ONLY DATA REQUIRED (PHASE 2) */}
+        <div
+          id="hero-card-only-data-required"
+          className="glass-panel p-4 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-slate-900/15 to-transparent flex flex-col justify-between group shadow-lg"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  <FileSpreadsheet className="w-3 h-3" /> Phase 2: Only Data Required
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 hidden sm:inline">Data Required Tab</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2">
+                Data Fill & Verification Queue
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                OCR extraction, supplier matched, net & gross entered, basket items reconciled & submitted.
+              </p>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0 group-hover:scale-105 transition-transform shadow-md shadow-emerald-500/10">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div
+              onClick={() => onSelectOperation ? onSelectOperation('data_fill') : onNavigateToHistory?.('All', 'data_fill')}
+              className="cursor-pointer flex items-baseline gap-2 group-hover:brightness-110"
+              title="Click to filter records for only data-filled submissions"
+            >
+              <span className="text-3xl sm:text-4xl font-black text-emerald-500 dark:text-emerald-400 font-mono tracking-tight">
+                {stats.totalDataFilled ?? 0}
+              </span>
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                submissions data-filled
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectOperation ? onSelectOperation('data_fill') : onNavigateToHistory?.('All', 'data_fill')}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Data Fill</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
+              {onStartBot && (
+                <button
+                  type="button"
+                  onClick={() => onStartBot('data_required_only')}
+                  disabled={isLoadingAction}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  title="Run Phase 2 bot to fill form data for submissions"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Start Data Only</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
       {/* 1. Interactive Pipeline Distribution Bar */}
       <div className="glass-panel p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">

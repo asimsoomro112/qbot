@@ -1,4 +1,5 @@
 export type BotStatusState = 'running' | 'stopped' | 'paused' | 'error';
+export type BotRunMode = 'all' | 'redact_only' | 'data_required_only';
 
 export type BotProgressStep =
   | 'login'
@@ -26,6 +27,8 @@ export interface CurrentlyProcessing {
 
 export interface BotStats {
   totalToday: number;
+  totalRedacted: number;
+  totalDataFilled: number;
   matchedSuccessfully: number;
   mismatchesFound: number;
   errorsEncountered: number;
@@ -42,6 +45,7 @@ export interface BotStatus {
   lastHeartbeat: string;
   currentlyProcessing: CurrentlyProcessing | null;
   stats: BotStats;
+  mode?: BotRunMode;
 }
 
 export interface LogEntry {
@@ -208,7 +212,9 @@ export interface ProcessedSubmission {
   id: string;
   submissionId: string;
   processedAt: string;
-  status: 'Success' | 'Incomplete' | 'Mismatch' | 'Error' | 'Skipped' | 'Needs Review';
+  status: 'Success' | 'Incomplete' | 'Mismatch' | 'Error' | 'Skipped' | 'Needs Review' | 'Redacted' | string;
+  operationType?: 'redaction' | 'data_fill';
+  invoicesRedactedCount?: number;
   invoiceNumber: string;
   supplierName: string;
   actionTaken: string;

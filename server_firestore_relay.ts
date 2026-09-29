@@ -30,7 +30,21 @@ export interface RelayHooks {
 let dbInstance: Firestore | null = null;
 let heartbeatTimer: NodeJS.Timeout | null = null;
 
+/**
+ * Check if Firebase cloud sync is explicitly enabled.
+ * Default: DISABLED for local use. Set ENABLE_FIREBASE_SYNC=true in .env to enable.
+ */
+function isFirebaseSyncEnabled(): boolean {
+  const flag = (process.env.ENABLE_FIREBASE_SYNC || '').trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+}
+
 export function loadFirebaseConfig(): Record<string, string> | null {
+  // Gate: Firebase sync must be explicitly opted-in
+  if (!isFirebaseSyncEnabled()) {
+    return null;
+  }
+
   // 1. Check local or parent firebase_config.json
   const localConfigPath = path.resolve(process.cwd(), 'firebase_config.json');
   const parentConfigPath = path.resolve(process.cwd(), '..', 'firebase_config.json');
@@ -67,8 +81,11 @@ export function loadFirebaseConfig(): Record<string, string> | null {
 export function initFirestoreRelay(hooks: RelayHooks) {
   const config = loadFirebaseConfig();
   if (!config) {
-    console.log('\n[Firestore Relay] Note: Firebase credentials not found in .env or firebase_config.json.');
-    console.log('[Firestore Relay] Running in standalone local HTTP mode. (Add Firebase keys to enable remote Vercel cloud sync).\n');
+    if (isFirebaseSyncEnabled()) {
+      console.log('\n[Firestore Relay] Note: Firebase credentials not found in .env or firebase_config.json.');
+    }
+    console.log('[Dashboard] Running in LOCAL-ONLY mode (HTTP polling). Firebase cloud sync is OFF.');
+    console.log('[Dashboard] To enable remote Vercel sync, set ENABLE_FIREBASE_SYNC=true in .env\n');
     return null;
   }
 
@@ -88,27 +105,44 @@ export function initFirestoreRelay(hooks: RelayHooks) {
     // 1. Initial State Push
     pushBotState(hooks.getBotStatus());
 
-    // 1b. Initial sync of existing submissions & alerts
-    try {
-      const existingSubs = hooks.getSubmissions();
-      for (const sub of existingSubs) {
-        syncSubmission(sub);
-      }
-      const existingAlerts = hooks.getAlerts();
-      for (const alert of existingAlerts) {
-        syncAlert(alert);
-      }
-      if (existingSubs.length > 0 || existingAlerts.length > 0) {
-        console.log(`[Firestore Relay] Synced ${existingSubs.length} submissions and ${existingAlerts.length} alerts to Firestore on startup.`);
-      }
-    } catch (err) {
-      console.warn('[Firestore Relay] Initial submission/alert sync warning:', err);
-    }
+    // 1b. Throttled initial sync — batch with delays to avoid quota exhaustion
+    (async () => {
+      try {
+        const existingSubs = hooks.getSubmissions();
+        const existingAlerts = hooks.getAlerts();
+        const BATCH_SIZE = 5;
+        const BATCH_DELAY_MS = 1000;
 
-    // 2. Heartbeat loop (every 5 seconds)
+        // Sync submissions in small batches
+        for (let i = 0; i < existingSubs.length; i += BATCH_SIZE) {
+          const batch = existingSubs.slice(i, i + BATCH_SIZE);
+          await Promise.allSettled(batch.map(sub => syncSubmission(sub)));
+          if (i + BATCH_SIZE < existingSubs.length) {
+            await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+          }
+        }
+
+        // Sync alerts in small batches
+        for (let i = 0; i < existingAlerts.length; i += BATCH_SIZE) {
+          const batch = existingAlerts.slice(i, i + BATCH_SIZE);
+          await Promise.allSettled(batch.map(a => syncAlert(a)));
+          if (i + BATCH_SIZE < existingAlerts.length) {
+            await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+          }
+        }
+
+        if (existingSubs.length > 0 || existingAlerts.length > 0) {
+          console.log(`[Firestore Relay] Synced ${existingSubs.length} submissions and ${existingAlerts.length} alerts to Firestore (throttled).`);
+        }
+      } catch (err) {
+        console.warn('[Firestore Relay] Initial sync warning (non-fatal):', (err as any)?.message || err);
+      }
+    })();
+
+    // 2. Heartbeat loop (every 30 seconds — reduced from 5s to avoid quota issues)
     heartbeatTimer = setInterval(() => {
       pushBotState(hooks.getBotStatus());
-    }, 5000);
+    }, 30000);
 
     // 3. Listen for pending commands from Vercel
     const commandsQuery = query(

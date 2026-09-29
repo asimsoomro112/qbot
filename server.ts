@@ -56,22 +56,35 @@ try {
 let botStatus: BotStatus = {
   status: 'stopped', lastStatusChange: new Date().toISOString(), isConnected: false,
   botHostname: 'Local Windows runner', botVersion: 'bot.py', lastHeartbeat: '', currentlyProcessing: null,
-  stats: { totalToday: 0, matchedSuccessfully: 0, mismatchesFound: 0, errorsEncountered: 0, avgProcessingTimeSec: 0, lastRunTime: '' },
+  stats: { totalToday: 0, totalRedacted: 0, totalDataFilled: 0, matchedSuccessfully: 0, mismatchesFound: 0, errorsEncountered: 0, avgProcessingTimeSec: 0, lastRunTime: '' },
 };
+
+function isRedactionSubmission(s: ProcessedSubmission): boolean {
+  if (s.operationType === 'redaction') return true;
+  if (s.status === 'Redacted') return true;
+  const action = (s.actionTaken || '').toLowerCase();
+  if (action.includes('redact') && !action.includes('submitted & redacted')) return true;
+  if (action.startsWith('redacted')) return true;
+  return false;
+}
 
 function recomputeStats(): BotStats {
   // 1. Total processed matches the actual count of submissions in the system
   const totalToday = processedSubmissions.length;
 
-  // 2. Matched successfully counts submissions with status === 'Success'
+  // 2. Count dedicated redaction vs data fill submissions
+  const totalRedacted = processedSubmissions.filter((s) => isRedactionSubmission(s)).length;
+  const totalDataFilled = Math.max(0, totalToday - totalRedacted);
+
+  // 3. Matched successfully counts submissions with status === 'Success'
   const matchedSuccessfully = processedSubmissions.filter((s) => s.status === 'Success').length;
 
-  // 3. Mismatches / manual reviews: all items flagged for human review or skipped
+  // 4. Mismatches / manual reviews: all items flagged for human review or skipped
   const mismatchesFound = processedSubmissions.filter(
     (s) => s.status === 'Mismatch' || s.status === 'Needs Review' || s.status === 'Skipped'
   ).length;
 
-  // 4. Technical / portal execution errors
+  // 5. Technical / portal execution errors
   const errorsEncountered = processedSubmissions.filter((s) => s.status === 'Error').length;
 
   const times = processedSubmissions
@@ -89,6 +102,8 @@ function recomputeStats(): BotStats {
 
   botStatus.stats = {
     totalToday,
+    totalRedacted,
+    totalDataFilled,
     matchedSuccessfully,
     mismatchesFound,
     errorsEncountered,
@@ -126,22 +141,18 @@ function saveHistoryStore() {
 
 // Watch history_store.json on disk so background runs or external updates automatically sync
 if (existsSync(HISTORY_FILE)) {
-  watchFile(HISTORY_FILE, { interval: 1500 }, () => {
+  watchFile(HISTORY_FILE, { interval: 2000 }, () => {
     try {
       const savedData = JSON.parse(readFileSync(HISTORY_FILE, 'utf-8'));
       if (Array.isArray(savedData.submissions)) {
         processedSubmissions = savedData.submissions;
-        for (const sub of processedSubmissions) {
-          syncSubmission(sub);
-        }
       }
       if (Array.isArray(savedData.alerts)) {
         alerts = savedData.alerts;
-        for (const alert of alerts) {
-          syncAlert(alert);
-        }
       }
       recomputeStats();
+      // Note: No bulk Firebase re-sync here. Individual addHistory/addAlert
+      // calls handle sync one-at-a-time to avoid Firestore quota exhaustion.
       pushBotState(botStatus);
     } catch {}
   });
@@ -192,6 +203,9 @@ function addLog(level: LogEntry['level'], message: string, submissionId?: string
   syncLogEntry(entry);
 }
 function addHistory(item: ProcessedSubmission) {
+  if (!item.operationType) {
+    item.operationType = isRedactionSubmission(item) ? 'redaction' : 'data_fill';
+  }
   processedSubmissions = [item, ...processedSubmissions.filter((entry) => entry.id !== item.id && entry.submissionId !== item.submissionId)].slice(0, 500);
   botStatus.stats.lastRunTime = item.processedAt;
   recomputeStats();
@@ -208,7 +222,11 @@ function addAlert(alert: AlertItem) {
 }
 function statusPayload() {
   recomputeStats();
-  return { ...botStatus, unresolvedAlertsCount: alerts.filter((alert) => alert.status === 'unresolved').length };
+  return { 
+    ...botStatus, 
+    mode: currentMode,
+    unresolvedAlertsCount: alerts.filter((alert) => alert.status === 'unresolved').length 
+  };
 }
 
 function stopBotProcess() {
@@ -236,29 +254,60 @@ function pauseBotProcess() {
   pushBotState(botStatus);
 }
 
-function startPythonBot(retrySubmissionKey = '') {
+let currentMode: 'all' | 'redact_only' | 'data_required_only' = 'all';
+
+function startPythonBot(
+  modeOrTarget: 'all' | 'redact_only' | 'data_required_only' | string = 'all',
+  retrySubmissionKey = ''
+) {
   if (botProcess && botProcess.exitCode === null) return { started: false, message: 'Bot already running.' };
   if (!existsSync(PYTHON)) return { started: false, message: `Python environment missing: ${PYTHON}` };
   const pythonProbe = spawnSync(PYTHON, ['--version'], { windowsHide: true });
   if (pythonProbe.error || pythonProbe.status !== 0) {
     return { started: false, message: 'Python virtual environment is unusable. Recreate .venv with an installed Python 3.11, then install requirements.txt.' };
   }
-  botStatus.status = 'running'; botStatus.isConnected = false; botStatus.lastStatusChange = new Date().toISOString();
+
+  let mode: 'all' | 'redact_only' | 'data_required_only' = 'all';
+  let target = retrySubmissionKey;
+  if (['all', 'redact_only', 'data_required_only'].includes(modeOrTarget)) {
+    mode = modeOrTarget as 'all' | 'redact_only' | 'data_required_only';
+  } else if (modeOrTarget && typeof modeOrTarget === 'string') {
+    target = modeOrTarget;
+  }
+
+  currentMode = mode;
+  botStatus.status = 'running'; 
+  botStatus.isConnected = false; 
+  botStatus.lastStatusChange = new Date().toISOString();
+  botStatus.mode = mode;
   pushBotState(botStatus);
+
+  const modeLabels: Record<string, string> = {
+    redact_only: 'Redaction Only',
+    data_required_only: 'Data Required Only',
+    all: 'Full Pipeline (All)',
+  };
+  const modeLabel = modeLabels[mode] || 'Full Pipeline';
+
   addLog(
     'info',
-    retrySubmissionKey
-      ? `Dashboard command: retrying only submission ${retrySubmissionKey}.`
-      : 'Dashboard command: starting local Python invoice bot.',
-    retrySubmissionKey || undefined,
+    target
+      ? `Dashboard command: retrying only submission ${target}.`
+      : `Dashboard command: starting local Python invoice bot in [${modeLabel}] mode.`,
+    target || undefined,
   );
   const pythonCmd = process.platform === 'win32' ? `"${PYTHON}"` : PYTHON;
-  botProcess = spawn(pythonCmd, ['-u', 'bot.py', '--dashboard'], {
+  const args = ['-u', 'bot.py', '--dashboard', '--mode', mode];
+  if (target) {
+    args.push(target);
+  }
+  botProcess = spawn(pythonCmd, args, {
     cwd: PROJECT_ROOT,
     env: {
       ...process.env,
       BOT_DASHBOARD_URL: `http://127.0.0.1:${PORT}`,
-      ...(retrySubmissionKey ? { BOT_RETRY_SUBMISSION_KEY: retrySubmissionKey } : {}),
+      BOT_MODE: mode,
+      ...(target ? { BOT_RETRY_SUBMISSION_KEY: target } : {}),
       PORTAL_LOGIN_URL: currentSettings.credentials.portalUrl,
       PORTAL_EMAIL: currentSettings.credentials.email,
       PORTAL_PASSWORD: currentSettings.credentials.password,
@@ -395,15 +444,45 @@ async function startServer() {
   });
   app.get('/api/alerts', (_req, res) => res.json({ alerts, unresolvedCount: alerts.filter((alert) => alert.status === 'unresolved').length }));
   app.get('/api/settings', (_req, res) => res.json(currentSettings));
-  app.post('/api/start', (_req, res) => { const result = startPythonBot(); return res.status(result.started || result.message === 'Bot already running.' ? 200 : 409).json({ success: result.started, ...result }); });
-  app.post('/api/stop', (_req, res) => {
+  const handleStartBotRoute = (req: express.Request, res: express.Response) => {
+    const rawMode = (req.body?.mode || req.query?.mode || 'all') as string;
+    const mode = (['all', 'redact_only', 'data_required_only'].includes(rawMode) ? rawMode : 'all') as 'all' | 'redact_only' | 'data_required_only';
+    const result = startPythonBot(mode);
+    const ok = result.started || result.message === 'Bot already running.';
+    return res.status(ok ? 200 : 409).json({
+      success: ok,
+      mode,
+      message: result.message || (result.started ? `Runner started in ${mode} mode.` : 'Failed to start bot.'),
+      ...result,
+    });
+  };
+  const handleStopBotRoute = (_req: express.Request, res: express.Response) => {
     stopBotProcess();
-    return res.json({ success: true, status: 'stopped' });
-  });
-  app.post('/api/pause', (_req, res) => {
+    return res.json({ success: true, status: 'stopped', message: 'Runner stopped.' });
+  };
+  const handlePauseBotRoute = (_req: express.Request, res: express.Response) => {
     pauseBotProcess();
-    return res.json({ success: true, status: 'paused' });
+    return res.json({ success: true, status: 'paused', message: 'Runner paused.' });
+  };
+
+  app.post('/api/start', handleStartBotRoute);
+  app.post('/api/runner/start', handleStartBotRoute);
+  app.post('/api/runner/start/redact', (req, res) => {
+    req.body = { ...req.body, mode: 'redact_only' };
+    handleStartBotRoute(req, res);
   });
+  app.post('/api/runner/start/data-required', (req, res) => {
+    req.body = { ...req.body, mode: 'data_required_only' };
+    handleStartBotRoute(req, res);
+  });
+  app.post('/api/runner/start/all', (req, res) => {
+    req.body = { ...req.body, mode: 'all' };
+    handleStartBotRoute(req, res);
+  });
+  app.post('/api/stop', handleStopBotRoute);
+  app.post('/api/runner/stop', handleStopBotRoute);
+  app.post('/api/pause', handlePauseBotRoute);
+  app.post('/api/runner/pause', handlePauseBotRoute);
   app.post('/api/settings', (req, res) => {
     const incoming = req.body || {};
     currentSettings = {

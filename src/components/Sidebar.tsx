@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Scissors,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { BotStatus } from '../types';
 
@@ -24,6 +26,7 @@ interface SidebarProps {
   onOpenPythonModal: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onSelectOperation?: (op: 'all' | 'redaction' | 'data_fill') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenPythonModal,
   isCollapsed,
   onToggleCollapse,
+  onSelectOperation,
 }) => {
   const navItems = [
     {
@@ -185,6 +189,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 );
               })}
             </nav>
+
+            {/* Dedicated Queue Breakdown: Redaction vs Data Required */}
+            {!isCollapsed && (
+              <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 space-y-1">
+                <div className="px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-400/80 mb-1.5">
+                  Bot Queues Breakdown
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSelectOperation) onSelectOperation('redaction');
+                    else handleSelect('history');
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-amber-500/10 text-slate-700 dark:text-slate-300 hover:text-amber-500 transition-colors text-xs font-semibold group cursor-pointer border border-transparent hover:border-amber-500/20"
+                  title="View Only Redacted Submissions"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-lg bg-amber-500/15 text-amber-500">
+                      <Scissors className="w-3.5 h-3.5" />
+                    </span>
+                    <span>Only Redaction</span>
+                  </div>
+                  <span className="font-mono px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                    {botStatus.stats.totalRedacted ?? 0}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSelectOperation) onSelectOperation('data_fill');
+                    else handleSelect('history');
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-emerald-500/10 text-slate-700 dark:text-slate-300 hover:text-emerald-500 transition-colors text-xs font-semibold group cursor-pointer border border-transparent hover:border-emerald-500/20"
+                  title="View Only Data Required Submissions"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-lg bg-emerald-500/15 text-emerald-500">
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                    </span>
+                    <span>Only Data Required</span>
+                  </div>
+                  <span className="font-mono px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                    {botStatus.stats.totalDataFilled ?? 0}
+                  </span>
+                </button>
+              </div>
+            )}
 
             {/* Quick Stats Summary (expanded mode only) */}
             {!isCollapsed && (

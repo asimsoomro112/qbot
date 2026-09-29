@@ -13,6 +13,12 @@ export interface FirebaseConfig {
 // Read strictly from Vite environment variables or window global injection
 const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
 
+// Firebase cloud sync must be explicitly enabled (VITE_ENABLE_FIREBASE_SYNC=true)
+const firebaseSyncEnabled = (() => {
+  const flag = (env.VITE_ENABLE_FIREBASE_SYNC || '').toString().trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+})();
+
 export const firebaseConfig: FirebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY || (typeof window !== 'undefined' && (window as any).__FIREBASE_CONFIG__?.apiKey) || '',
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || (typeof window !== 'undefined' && (window as any).__FIREBASE_CONFIG__?.authDomain) || '',
@@ -23,7 +29,7 @@ export const firebaseConfig: FirebaseConfig = {
 };
 
 export const isFirebaseConfigured = Boolean(
-  firebaseConfig.projectId && firebaseConfig.apiKey
+  firebaseSyncEnabled && firebaseConfig.projectId && firebaseConfig.apiKey
 );
 
 let app: FirebaseApp | null = null;

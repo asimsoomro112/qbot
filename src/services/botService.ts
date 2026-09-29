@@ -17,6 +17,7 @@ import type {
   LogEntry,
   ProcessedSubmission,
   AlertItem,
+  BotRunMode,
 } from '../types';
 
 export { isFirebaseConfigured };
@@ -314,27 +315,50 @@ export function subscribeSettings(
 }
 
 /**
- * 6. Send Command: START
+ * 6. Send Command: START (with optional run mode: 'all' | 'redact_only' | 'data_required_only')
  */
-export async function sendStartCommand(): Promise<{ success: boolean; message: string }> {
+export async function sendStartCommand(mode: BotRunMode = 'all'): Promise<{ success: boolean; message: string }> {
   if (isFirebaseConfigured && db) {
     try {
       await addDoc(collection(db, 'bot_commands'), {
         action: 'START',
+        mode,
         status: 'pending',
         createdAt: serverTimestamp(),
         source: 'vercel_dashboard',
       });
-      return { success: true, message: 'Start command dispatched to local bot via Cloud Firestore' };
+      return { success: true, message: `Start (${mode}) command dispatched via Cloud Firestore` };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Failed to dispatch command' };
     }
   }
 
   // Local HTTP call
-  const res = await fetch('/api/runner/start', { method: 'POST' });
-  const data = await res.json();
-  return { success: res.ok, message: data.message || (res.ok ? 'Runner started' : 'Failed') };
+  try {
+    let res = await fetch('/api/runner/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+    if (!res.ok && res.status === 404) {
+      res = await fetch('/api/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+    }
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: text };
+    }
+    const ok = res.ok || data.success || data.started || data.message === 'Bot already running.';
+    return { success: ok, message: data.message || (ok ? `Runner started in ${mode} mode` : 'Failed to start runner') };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Failed to dispatch start command' };
+  }
 }
 
 /**
@@ -355,9 +379,23 @@ export async function sendPauseCommand(): Promise<{ success: boolean; message: s
     }
   }
 
-  const res = await fetch('/api/runner/pause', { method: 'POST' });
-  const data = await res.json();
-  return { success: res.ok, message: data.message || (res.ok ? 'Runner paused' : 'Failed') };
+  try {
+    let res = await fetch('/api/runner/pause', { method: 'POST' });
+    if (!res.ok && res.status === 404) {
+      res = await fetch('/api/pause', { method: 'POST' });
+    }
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: text };
+    }
+    const ok = res.ok || data.success;
+    return { success: ok, message: data.message || (ok ? 'Runner paused' : 'Failed to pause runner') };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Failed to dispatch pause command' };
+  }
 }
 
 /**
@@ -378,9 +416,23 @@ export async function sendStopCommand(): Promise<{ success: boolean; message: st
     }
   }
 
-  const res = await fetch('/api/runner/stop', { method: 'POST' });
-  const data = await res.json();
-  return { success: res.ok, message: data.message || (res.ok ? 'Runner stopped' : 'Failed') };
+  try {
+    let res = await fetch('/api/runner/stop', { method: 'POST' });
+    if (!res.ok && res.status === 404) {
+      res = await fetch('/api/stop', { method: 'POST' });
+    }
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: text };
+    }
+    const ok = res.ok || data.success;
+    return { success: ok, message: data.message || (ok ? 'Runner stopped' : 'Failed to stop runner') };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Failed to dispatch stop command' };
+  }
 }
 
 /**

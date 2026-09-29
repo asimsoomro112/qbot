@@ -16,6 +16,7 @@ import {
   Trash2,
   ExternalLink,
   Camera,
+  Scissors,
 } from 'lucide-react';
 import type { ProcessedSubmission } from '../types';
 
@@ -28,6 +29,7 @@ interface HistoryViewProps {
   onClearAllHistory?: () => void;
   onVerifySubmission?: (submissionId: string, status: 'verified' | 'unresolved' | 'pending', note?: string) => void;
   initialStatusFilter?: 'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped';
+  initialOperation?: 'all' | 'redaction' | 'data_fill';
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
@@ -39,7 +41,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   onClearAllHistory,
   onVerifySubmission,
   initialStatusFilter,
+  initialOperation,
 }) => {
+  const [operationFilter, setOperationFilter] = useState<'all' | 'redaction' | 'data_fill'>(initialOperation || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Needs Review' | 'Success' | 'Mismatch' | 'Error' | 'Skipped' | 'Multiple Invoices Submitted'>(initialStatusFilter || 'All');
   const [verificationFilter, setVerificationFilter] = useState<'All' | 'Verified' | 'Unresolved' | 'Pending'>('All');
@@ -54,9 +58,33 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     }
   }, [initialStatusFilter]);
 
+  React.useEffect(() => {
+    if (initialOperation) {
+      setOperationFilter(initialOperation);
+      setCurrentPage(1);
+    }
+  }, [initialOperation]);
+
+  const isRedaction = (s: ProcessedSubmission) => {
+    if (s.operationType === 'redaction') return true;
+    if (s.status === 'Redacted') return true;
+    const act = (s.actionTaken || '').toLowerCase();
+    return (act.includes('redact') && !act.includes('submitted & redacted')) || act.startsWith('redacted');
+  };
+
+  const totalRedactedCount = useMemo(() => submissions.filter(isRedaction).length, [submissions]);
+  const totalDataFilledCount = useMemo(() => submissions.filter((s) => !isRedaction(s)).length, [submissions]);
+
   // Filter logic
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((sub) => {
+      // Operation filter (All vs Only Redaction vs Only Data Required)
+      if (operationFilter === 'redaction') {
+        if (!isRedaction(sub)) return false;
+      } else if (operationFilter === 'data_fill') {
+        if (isRedaction(sub)) return false;
+      }
+
       // Status filter
       if (statusFilter === 'Needs Review') {
         if (sub.status === 'Success') return false;
@@ -97,7 +125,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
       return true;
     });
-  }, [submissions, statusFilter, searchQuery, dateFilter]);
+  }, [submissions, operationFilter, statusFilter, verificationFilter, searchQuery, dateFilter]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / itemsPerPage));
@@ -257,6 +285,83 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
       </div>
 
+      {/* High-Level Operational Segmented Selector: All vs Redactions vs Data Required */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-200/80 dark:bg-white/5 border border-slate-300/60 dark:border-white/10 text-xs font-bold shadow-inner">
+          <button
+            type="button"
+            onClick={() => {
+              setOperationFilter('all');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+              operationFilter === 'all'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <span>All Submissions</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/20 text-white font-mono">
+              {submissions.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOperationFilter('redaction');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+              operationFilter === 'redaction'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Scissors className="w-3.5 h-3.5" />
+            <span>✂️ Only Redaction Queue</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/20 text-white font-mono">
+              {totalRedactedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOperationFilter('data_fill');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+              operationFilter === 'data_fill'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>📝 Only Data Required</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/20 text-white font-mono">
+              {totalDataFilledCount}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          {operationFilter === 'redaction' && (
+            <span className="text-amber-500 font-semibold flex items-center gap-1">
+              <Scissors className="w-3.5 h-3.5" /> Phase 1 Redaction records: pricing &amp; IBAN masked
+            </span>
+          )}
+          {operationFilter === 'data_fill' && (
+            <span className="text-emerald-500 font-semibold flex items-center gap-1">
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Phase 2 Data Required records: supplier &amp; form filled
+            </span>
+          )}
+          {operationFilter === 'all' && (
+            <span>All automated bot verification records ({filteredSubmissions.length} shown)</span>
+          )}
+        </div>
+      </div>
+
       {/* Filter Controls Bar */}
       <div className="p-3.5 sm:p-4 rounded-2xl glass-panel shadow-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3">
         {/* Search input */}
@@ -389,6 +494,15 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       <span className="font-mono font-black text-slate-900 dark:text-white text-sm">
                         #{sub.submissionId}
                       </span>
+                      {isRedaction(sub) ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                          <Scissors className="w-2.5 h-2.5" /> Redact
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          <FileSpreadsheet className="w-2.5 h-2.5" /> Data
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                         {validDate
                           ? `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
@@ -567,8 +681,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                         isNeedsReview ? 'border-l-4 border-l-rose-500 bg-rose-500/5' : ''
                       }`}
                     >
-                    <td className="p-4 pl-6 font-mono font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300">
-                      #{sub.submissionId}
+                    <td className="p-4 pl-6 font-mono font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span>#{sub.submissionId}</span>
+                        {isRedaction(sub) ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30" title="Phase 1: Redaction">
+                            <Scissors className="w-2.5 h-2.5" /> Redact
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" title="Phase 2: Data Required">
+                            <FileSpreadsheet className="w-2.5 h-2.5" /> Data
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
                       {validDate ? (
