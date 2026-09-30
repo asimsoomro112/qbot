@@ -160,7 +160,8 @@ export function initFirestoreRelay(hooks: RelayHooks) {
 
           let resultMsg = 'OK';
           if (action === 'START') {
-            const res = hooks.onStartBot(data.submissionId);
+            const target = data.mode || data.submissionId;
+            const res = hooks.onStartBot(target);
             resultMsg = res.message;
           } else if (action === 'STOP') {
             hooks.onStopBot();
